@@ -39,19 +39,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && $_POST['action'] == 'add_subject') {
     }
 }
 
-// Handle the deletion of a subject
-if (isset($_GET['delete_subject_code'])) {
-    $delete_subject_code = $_GET['delete_subject_code'];
-
-    foreach ($_SESSION['subjects'] as $key => $subject) {
-        if ($subject['subject_code'] == $delete_subject_code) {
-            unset($_SESSION['subjects'][$key]);
-            $successMessage = "Subject deleted successfully!";
-            header('Location: add.php'); // Redirect after deleting
-            exit();
-        }
-    }
-}
 ?>
 
 <!DOCTYPE html>
@@ -80,7 +67,7 @@ if (isset($_GET['delete_subject_code'])) {
     <nav aria-label="breadcrumb">
         <ol class="breadcrumb mt-5">
             <li class="breadcrumb-item"><a href="../dashboard.php">Dashboard</a></li>
-            <li class="breadcrumb-item active" aria-current="page">Manage Subjects</li>
+            <li class="breadcrumb-item active" aria-current="page">Add Subjects</li>
         </ol>
     </nav>
 
@@ -108,7 +95,7 @@ if (isset($_GET['delete_subject_code'])) {
 
             <div class="form-group">
                 <label for="subject_code">Subject Code</label>
-                <input type="number" class="form-control" id="subject_code" name="subject_code" required>
+                <input type="text" class="form-control" id="subject_code" name="subject_code" required>
             </div>
 
             <div class="form-group">
@@ -143,7 +130,7 @@ if (isset($_GET['delete_subject_code'])) {
                                 <a href="edit.php?subject_code=<?= htmlspecialchars($subject['subject_code']) ?>" class="btn btn-info btn-sm">Edit</a>
 
                                 <!-- Delete button (red) -->
-                                <a href="delete.php?delete_subject_code=<?= htmlspecialchars($subject['subject_code']) ?>" class="btn btn-danger btn-sm" onclick="return confirm('Are you sure you want to delete this subject?');">Delete</a>
+                                <a href="delete.php?subject_code=<?= htmlspecialchars($subject['subject_code']) ?>" class="btn btn-danger btn-sm">Delete</a>
                             </td>
                         </tr>
                     <?php endforeach; ?>
