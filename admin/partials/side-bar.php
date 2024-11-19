@@ -29,8 +29,8 @@
 
             <ul class="nav flex-column mb-auto">
                 <li class="nav-item">
-                    <a class="nav-link d-flex align-items-center gap-2" href="#">
-                    <i class="fa-solid fa-right-to-bracket fa-fw me-2"></i>                        
+                    <a class="nav-link d-flex align-items-center gap-2" href="logout.php">
+                        <i class="fa-solid fa-right-to-bracket fa-fw me-2"></i>                        
                         Logout
                     </a>
                 </li>
