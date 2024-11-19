@@ -140,10 +140,10 @@ if (isset($_GET['delete_subject_code'])) {
                             <td><?= htmlspecialchars($subject['subject_name']) ?></td>
                             <td>
                                 <!-- Edit button (blue) -->
-                                <a href="edit_subject.php?subject_code=<?= htmlspecialchars($subject['subject_code']) ?>" class="btn btn-info btn-sm">Edit</a>
+                                <a href="edit.php?subject_code=<?= htmlspecialchars($subject['subject_code']) ?>" class="btn btn-info btn-sm">Edit</a>
 
                                 <!-- Delete button (red) -->
-                                <a href="add.php?delete_subject_code=<?= htmlspecialchars($subject['subject_code']) ?>" class="btn btn-danger btn-sm" onclick="return confirm('Are you sure you want to delete this subject?');">Delete</a>
+                                <a href="delete.php?delete_subject_code=<?= htmlspecialchars($subject['subject_code']) ?>" class="btn btn-danger btn-sm" onclick="return confirm('Are you sure you want to delete this subject?');">Delete</a>
                             </td>
                         </tr>
                     <?php endforeach; ?>
