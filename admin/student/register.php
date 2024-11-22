@@ -1,6 +1,8 @@
 <?php
 session_start();
 include('../partials/header.php'); // Include header from the 'partials' folder
+require_once('../../functions.php'); // Include the functions file for database operations
+include ('../partials/side-bar.php');
 // Initialize error and success messages
 $errorMessages = [];
 $successMessage = "";
@@ -14,29 +16,37 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && $_POST['action'] == 'add_student') {
     if (empty($student_id) || empty($first_name) || empty($last_name)) {
         $errorMessages[] = "All fields are required.";
     } else {
-        // Prevent re-adding student with the same ID
-        $exists = false;
-        foreach ($_SESSION['students'] as $student) {
-            if ($student['student_id'] == $student_id) {
-                $exists = true;
-                break;
+        // Check if student ID already exists in the database
+        $conn = dbConnect();
+        $stmt = $conn->prepare("SELECT * FROM students WHERE student_id = ?");
+        $stmt->bind_param("i", $student_id);
+        $stmt->execute();
+        $result = $stmt->get_result();
+
+        if ($result->num_rows > 0) {
+            $errorMessages[] = "Student ID '$student_id' already exists!";
+        } else {
+            // Insert student into the database
+            $stmt = $conn->prepare("INSERT INTO students (student_id, first_name, last_name) VALUES (?, ?, ?)");
+            $stmt->bind_param("iss", $student_id, $first_name, $last_name);
+
+            if ($stmt->execute()) {
+                $successMessage = "Student added successfully!";
+            } else {
+                $errorMessages[] = "Failed to add the student. Please try again.";
             }
         }
 
-        if ($exists) {
-            $errorMessages[] = "Student ID '$student_id' already exists!";
-        } else {
-            $_SESSION['students'][] = [
-                'student_id' => $student_id,
-                'first_name' => $first_name,
-                'last_name' => $last_name
-            ];
-            $successMessage = "Student added successfully!";
-            header('Location: register.php');
-            exit(); // Stop further execution after redirect
-        }
+        $stmt->close();
+        $conn->close();
     }
 }
+
+// Fetch the list of students from the database
+$conn = dbConnect();
+$result = $conn->query("SELECT * FROM students");
+$students = $result->fetch_all(MYSQLI_ASSOC);
+$conn->close();
 ?>
 
 <!DOCTYPE html>
@@ -121,23 +131,19 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && $_POST['action'] == 'add_student') {
                 </tr>
             </thead>
             <tbody>
-                <?php if (!empty($_SESSION['students'])): ?>
-                    <?php foreach ($_SESSION['students'] as $student): ?>
+                <?php if (!empty($students)): ?>
+                    <?php foreach ($students as $student): ?>
                         <tr>
                             <td><?= htmlspecialchars($student['student_id']) ?></td>
                             <td><?= htmlspecialchars($student['first_name']) ?></td>
                             <td><?= htmlspecialchars($student['last_name']) ?></td>
                             <td>
                                 <!-- Edit and delete options -->
-                                <a href="edit.php?student_id=<?= htmlspecialchars($student['student_id']) ?>" class="btn btn-warning btn-sm">Edit</a>
+                                <a href="edit.php?student_id=<?= htmlspecialchars($student['student_id']) ?>" class="btn btn-info btn-sm">Edit</a>
                                 <a href="delete.php?student_id=<?= htmlspecialchars($student['student_id']) ?>" class="btn btn-danger btn-sm">Delete</a>
+                                <a href="attach-subject.php?student_id=<?= htmlspecialchars($student['student_id']) ?>" class="btn btn-warning btn-sm">Attach Subject</a>
 
-                                <!-- Attach subject button -->
-                                <form method="POST" class="d-inline">
-                                    <input type="hidden" name="action" value="attach_subject">
-                                    <input type="hidden" name="student_id_to_attach" value="<?= htmlspecialchars($student['student_id']) ?>">
-                                    <button type="submit" class="btn btn-info btn-sm">Attach Subject</button>
-                                </form>
+
                             </td>
                         </tr>
                     <?php endforeach; ?>

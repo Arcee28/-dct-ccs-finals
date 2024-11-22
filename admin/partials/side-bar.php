@@ -7,31 +7,41 @@
         <div class="offcanvas-body d-md-flex flex-column p-0 pt-lg-3 overflow-y-auto">
             <ul class="nav flex-column">
                 <li class="nav-item">
-                    <a class="nav-link d-flex align-items-center gap-2" href="#">
+                    <?php 
+                    $currentPage = basename($_SERVER['PHP_SELF']);
+                    $dashboardActive = ($currentPage == 'dashboard.php') ? 'disabled' : '';
+                    ?>
+                    <a class="nav-link d-flex align-items-center gap-2 <?= $dashboardActive ?>" href="../dashboard.php" <?= ($dashboardActive == 'disabled') ? 'aria-disabled="true" tabindex="-1"' : '' ?> 
+                    <?= ($dashboardActive == 'disabled') ? 'style="pointer-events: none;"' : '' ?>>
                         <i class="fa-solid fa-gauge fa-fw me-2"></i>
                         Dashboard
                     </a>
                 </li>
+
                 <li class="nav-item">
-                    <a class="nav-link d-flex align-items-center gap-2" href="subject/add.php">
-                        Subjects
-                    </a>
-                </li>
-                <!-- Updated 'Students' link -->
-                <li class="nav-item">
-                    <a class="nav-link d-flex align-items-center gap-2" href="student/register.php"> <!-- Link to register.php -->
+                    <?php 
+                    $studentsActive = in_array($currentPage, ['register.php', 'edit.php', 'delete.php']) ? 'disabled' : '';
+                    ?>
+                    <a class="nav-link d-flex align-items-center gap-2 <?= $studentsActive ?>" href="student/register.php" 
+                    <?= $studentsActive ? 'aria-disabled="true" tabindex="-1" style="pointer-events: none;"' : '' ?>>
                         <i class="fa-solid fa-user fa-fw me-2"></i>
                         Students
                     </a>
-                </li>                
-            </ul>
-           
-            <hr class="my-3">
+                </li>
 
+                <li class="nav-item">
+                    <a class="nav-link d-flex align-items-center gap-2" href="subject/add.php">
+                        <i class="fa-solid fa-book fa-fw me-2"></i>
+                        Subjects
+                    </a>
+                </li>
+
+            </ul>
+            <hr class="my-3">
             <ul class="nav flex-column mb-auto">
                 <li class="nav-item">
                     <a class="nav-link d-flex align-items-center gap-2" href="logout.php">
-                        <i class="fa-solid fa-right-to-bracket fa-fw me-2"></i>                        
+                        <i class="fa-solid fa-right-to-bracket fa-fw me-2"></i>
                         Logout
                     </a>
                 </li>

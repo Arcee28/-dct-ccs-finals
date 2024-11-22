@@ -1,6 +1,11 @@
 <?php
 session_start();
+
+// Start output buffering to prevent "headers already sent" error
+ob_start();
+
 include('../partials/header.php'); // Include header from the 'partials' folder
+include ('../partials/side-bar.php');
 
 // Initialize error and success messages
 $errorMessages = [];
@@ -10,14 +15,14 @@ $successMessage = "";
 if (isset($_GET['subject_code'])) {
     $subject_code = $_GET['subject_code'];
 
-    // Find the subject in the session array
-    $subject = null;
-    foreach ($_SESSION['subjects'] as &$s) {
-        if ($s['subject_code'] == $subject_code) {
-            $subject = &$s;
-            break;
-        }
-    }
+    // Connect to the database and fetch subject details using subject_code
+    include('../../functions.php'); // Include the necessary function to fetch subject data from the database
+    $conn = dbConnect(); // Assuming dbConnect() is a function to connect to your database
+    $stmt = $conn->prepare("SELECT * FROM subjects WHERE subject_code = ?");
+    $stmt->bind_param("s", $subject_code);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    $subject = $result->fetch_assoc();
 
     // If subject not found, show error
     if ($subject === null) {
@@ -35,22 +40,25 @@ if (isset($_GET['subject_code'])) {
         } else {
             // Check if the new subject code already exists (other than the current one)
             $exists = false;
-            foreach ($_SESSION['subjects'] as $s) {
-                if ($s['subject_code'] == $new_subject_code && $s['subject_code'] != $subject_code) {
-                    $exists = true;
-                    break;
-                }
+            $stmt = $conn->prepare("SELECT subject_code FROM subjects WHERE subject_code = ? AND subject_code != ?");
+            $stmt->bind_param("ss", $new_subject_code, $subject_code);
+            $stmt->execute();
+            $result = $stmt->get_result();
+            if ($result->num_rows > 0) {
+                $exists = true;
             }
 
             if ($exists) {
                 $errorMessages[] = "Subject code '$new_subject_code' already exists!";
             } else {
-                // Update the subject in the session
-                $subject['subject_code'] = $new_subject_code;
-                $subject['subject_name'] = $new_subject_name;
+                // Update the subject in the database
+                $stmt = $conn->prepare("UPDATE subjects SET subject_code = ?, subject_name = ? WHERE subject_code = ?");
+                $stmt->bind_param("sss", $new_subject_code, $new_subject_name, $subject_code);
+                $stmt->execute();
 
                 // Success message and redirect
                 $successMessage = "Subject updated successfully!";
+                // Redirect after successful update
                 header('Location: add.php'); // Redirect back to the subject list
                 exit(); // Stop further execution after redirect
             }
@@ -139,3 +147,4 @@ if (isset($_GET['subject_code'])) {
 <?php
 include('../partials/footer.php'); // Include footer from the 'partials' folder
 ?>
+

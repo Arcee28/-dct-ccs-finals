@@ -1,41 +1,51 @@
 <?php
+// Start output buffering to prevent issues with headers
+ob_start();
+
 session_start();
 include('../partials/header.php'); // Include header from the 'partials' folder
+include('../partials/side-bar.php');
+include('../../functions.php'); // Ensure this path is correct
 
-// Initialize error message
+// Initialize error message and success message
 $errorMessage = "";
+$successMessage = "";
 
 // Ensure the subject_code is set in the URL
 if (isset($_GET['subject_code'])) {
     $subject_code = $_GET['subject_code'];
 
-    // Find the subject by code
-    $subject = null;
-    foreach ($_SESSION['subjects'] as $s) {
-        if ($s['subject_code'] == $subject_code) {
-            $subject = $s;
-            break;
-        }
-    }
+    // Connect to the database
+    $conn = dbConnect(); // This function should be in dbConnect.php
+
+    // Fetch the subject details from the database
+    $stmt = $conn->prepare("SELECT * FROM subjects WHERE subject_code = ?");
+    $stmt->bind_param("s", $subject_code);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    
+    // If subject exists, get the subject details
+    $subject = $result->fetch_assoc();
 
     // If subject is not found
-    if ($subject === null) {
+    if (!$subject) {
         $errorMessage = "Subject not found.";
     }
 
     // Handle the deletion if confirmed
     if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['confirm_delete'])) {
-        // Remove the subject from session
-        foreach ($_SESSION['subjects'] as $key => $s) {
-            if ($s['subject_code'] == $subject_code) {
-                unset($_SESSION['subjects'][$key]);
-                break;
-            }
+        // Delete the subject from the database
+        $stmt = $conn->prepare("DELETE FROM subjects WHERE subject_code = ?");
+        $stmt->bind_param("s", $subject_code);
+        
+        if ($stmt->execute()) {
+            // Redirect to add.php after successful deletion
+            $successMessage = "Subject deleted successfully!";
+            header("Location: add.php?success=" . urlencode($successMessage));
+            exit();
+        } else {
+            $errorMessage = "Error deleting subject. Please try again later.";
         }
-
-        // Redirect to add.php after successful deletion
-        header("Location: add.php");
-        exit();
     }
 } else {
     $errorMessage = "Subject code is missing.";
@@ -73,17 +83,17 @@ if (isset($_GET['subject_code'])) {
     <h3 class="text-left">Delete Subject Confirmation</h3>
 
     <?php if ($errorMessage): ?>
-        <div class="alert alert-danger"><?= $errorMessage ?></div>
+        <div class="alert alert-danger"><?= htmlspecialchars($errorMessage) ?></div>
     <?php endif; ?>
 
     <?php if ($subject): ?>
         <div class="bordered-container">
             <strong>Are you sure you want to delete the following subject?</strong><br>
             <ul>
-                <li><strong>Subject Code:</strong> <?= $subject['subject_code'] ?></li>
-                <li><strong>Subject Name:</strong> <?= $subject['subject_name'] ?></li>
+                <li><strong>Subject Code:</strong> <?= htmlspecialchars($subject['subject_code']) ?></li>
+                <li><strong>Subject Name:</strong> <?= htmlspecialchars($subject['subject_name']) ?></li>
             </ul>
-            <form action="delete.php?subject_code=<?= $subject['subject_code'] ?>" method="POST">
+            <form action="delete.php?subject_code=<?= htmlspecialchars($subject['subject_code']) ?>" method="POST">
                 <a href="add.php" class="btn btn-secondary">Cancel</a>
                 <button type="submit" name="confirm_delete" class="btn btn-primary">Delete Subject</button>
             </form>
@@ -98,4 +108,7 @@ if (isset($_GET['subject_code'])) {
 
 <?php
 include('../partials/footer.php'); // Include footer from the 'partials' folder
+
+// End output buffering
+ob_end_flush();
 ?>

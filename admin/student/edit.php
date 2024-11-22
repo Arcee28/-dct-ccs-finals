@@ -1,6 +1,8 @@
 <?php
 session_start();
 include('../partials/header.php'); // Corrected path to header.php
+require_once('../../functions.php'); // Include the functions file for database operations
+
 // Initialize error and success messages
 $errorMessages = [];
 $successMessage = "";
@@ -9,18 +11,21 @@ $successMessage = "";
 if (isset($_GET['student_id'])) {
     $student_id = $_GET['student_id'];
 
-    // Find the student in the session array
-    $student = null;
-    foreach ($_SESSION['students'] as $s) {
-        if ($s['student_id'] == $student_id) {
-            $student = $s;
-            break;
-        }
-    }
+    // Fetch student data from the database
+    $conn = dbConnect();
+    $stmt = $conn->prepare("SELECT * FROM students WHERE student_id = ?");
+    $stmt->bind_param("i", $student_id);
+    $stmt->execute();
+    $result = $stmt->get_result();
 
-    if ($student === null) {
+    if ($result->num_rows > 0) {
+        $student = $result->fetch_assoc();
+    } else {
         $errorMessages[] = "Student not found.";
     }
+
+    $stmt->close();
+    $conn->close();
 } else {
     $errorMessages[] = "Student ID is missing.";
 }
@@ -34,17 +39,21 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && $_POST['action'] == 'edit_student') 
     if (empty($new_first_name) || empty($new_last_name)) {
         $errorMessages[] = "All fields are required.";
     } else {
-        // Update the student data in the session
-        foreach ($_SESSION['students'] as &$s) {
-            if ($s['student_id'] == $student_id) {
-                $s['first_name'] = $new_first_name;
-                $s['last_name'] = $new_last_name;
-                break;
-            }
+        // Update the student data in the database
+        $conn = dbConnect();
+        $stmt = $conn->prepare("UPDATE students SET first_name = ?, last_name = ? WHERE student_id = ?");
+        $stmt->bind_param("ssi", $new_first_name, $new_last_name, $student_id);
+
+        if ($stmt->execute()) {
+            $successMessage = "Student details updated successfully!";
+            header('Location: register.php');
+            exit(); // Stop further execution after redirect
+        } else {
+            $errorMessages[] = "Failed to update the student. Please try again.";
         }
-        $successMessage = "Student details updated successfully!";
-        header('Location: register.php');
-        exit();
+
+        $stmt->close();
+        $conn->close();
     }
 }
 ?>
@@ -95,7 +104,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && $_POST['action'] == 'edit_student') 
     <?php endif; ?>
 
     <!-- Edit student form inside the bordered container -->
-    <?php if ($student !== null): ?>
+    <?php if (isset($student)): ?>
         <div class="form-container">
             <form method="POST">
                 <input type="hidden" name="action" value="edit_student">

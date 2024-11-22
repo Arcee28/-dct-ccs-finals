@@ -1,40 +1,50 @@
 <?php
 session_start();
-include('../partials/header.php'); // Corrected path to header.php from the 'partials' folder
+include('../partials/header.php'); // Include header from the 'partials' folder
+require_once('../../functions.php'); // Include the functions file for database operations
+include ('../partials/side-bar.php');
 // Initialize error message
 $errorMessage = "";
-
-// Ensure the student_id is set in the URL
+// Ensure student_id is set in the URL
 if (isset($_GET['student_id'])) {
     $student_id = $_GET['student_id'];
 
-    // Find the student by ID
-    $student = null;
-    foreach ($_SESSION['students'] as $s) {
-        if ($s['student_id'] == $student_id) {
-            $student = $s;
-            break;
-        }
-    }
+    // Connect to the database
+    $conn = dbConnect();
+    
+    // Fetch the student data from the database
+    $stmt = $conn->prepare("SELECT * FROM students WHERE student_id = ?");
+    $stmt->bind_param("s", $student_id); // Change 'i' to 's' since student_id is a string
+    $stmt->execute();
+    $result = $stmt->get_result();
 
-    // If student is not found
-    if ($student === null) {
+    // If student found, fetch the details
+    if ($result->num_rows > 0) {
+        $student = $result->fetch_assoc();
+    } else {
         $errorMessage = "Student not found.";
     }
 
+    $stmt->close();
+    $conn->close();
+
     // Handle the deletion if confirmed
     if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['confirm_delete'])) {
-        // Remove the student from session
-        foreach ($_SESSION['students'] as $key => $s) {
-            if ($s['student_id'] == $student_id) {
-                unset($_SESSION['students'][$key]);
-                break;
-            }
+        // Connect to the database again to delete the student
+        $conn = dbConnect();
+        $stmt = $conn->prepare("DELETE FROM students WHERE student_id = ?");
+        $stmt->bind_param("s", $student_id); // Again, use 's' for string binding
+
+        if ($stmt->execute()) {
+            // Redirect to the register.php after successful deletion
+            header("Location: register.php");
+            exit(); // Ensure the script stops execution after redirection
+        } else {
+            $errorMessage = "Failed to delete the student. Please try again.";
         }
 
-        // Redirect back to register.php after successful deletion
-        header("Location: register.php");
-        exit();
+        $stmt->close();
+        $conn->close();
     }
 } else {
     $errorMessage = "Student ID is missing.";
@@ -73,21 +83,23 @@ if (isset($_GET['student_id'])) {
 
     <h3 class="text-left">Delete Student</h3>
 
+    <!-- Display any error message -->
     <?php if ($errorMessage): ?>
         <div class="alert alert-danger"><?= $errorMessage ?></div>
     <?php endif; ?>
 
-    <?php if ($student): ?>
+    <!-- If student data is found, display details for confirmation -->
+    <?php if (isset($student)): ?>
         <div class="bordered-container">
             <strong>Are you sure you want to delete the following student?</strong><br>
             <ul>
-                <li><strong>Student ID:</strong> <?= $student['student_id'] ?></li>
-                <li><strong>First Name:</strong> <?= $student['first_name'] ?></li>
-                <li><strong>Last Name:</strong> <?= $student['last_name'] ?></li>
+                <li><strong>Student ID:</strong> <?= htmlspecialchars($student['student_id']) ?></li>
+                <li><strong>First Name:</strong> <?= htmlspecialchars($student['first_name']) ?></li>
+                <li><strong>Last Name:</strong> <?= htmlspecialchars($student['last_name']) ?></li>
             </ul>
-            <form action="delete.php?student_id=<?= $student['student_id'] ?>" method="POST">
+            <form action="delete.php?student_id=<?= htmlspecialchars($student['student_id']) ?>" method="POST">
                 <a href="register.php" class="btn btn-secondary">Cancel</a>
-                <button type="submit" name="confirm_delete" class="btn btn-primary">Delete Student Record</button>
+                <button type="submit" name="confirm_delete" class="btn btn-danger">Delete Student Record</button>
             </form>
         </div>
     <?php endif; ?>
@@ -99,5 +111,5 @@ if (isset($_GET['student_id'])) {
 </html>
 
 <?php
-include('../partials/footer.php'); // Corrected path to footer.php from the 'partials' folder
+include('../partials/footer.php'); // Include footer from the 'partials' folder
 ?>

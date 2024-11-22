@@ -1,13 +1,15 @@
 <?php
 session_start();
 include('../partials/header.php'); // Include header from the 'partials' folder
+include('../partials/side-bar.php');
+include('../../functions.php'); // Include the function.php file
 
 // Initialize error and success messages
 $errorMessages = [];
 $successMessage = "";
 
 // Handle form submission for adding a subject
-if ($_SERVER['REQUEST_METHOD'] == 'POST' && $_POST['action'] == 'add_subject') {
+if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action']) && $_POST['action'] == 'add_subject') {
     $subject_code = trim($_POST['subject_code']);
     $subject_name = trim($_POST['subject_name']);
 
@@ -15,32 +17,22 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && $_POST['action'] == 'add_subject') {
     if (empty($subject_code) || empty($subject_name)) {
         $errorMessages[] = "All fields are required.";
     } else {
-        // Prevent re-adding subject with the same code
-        $exists = false;
-        foreach ($_SESSION['subjects'] as $subject) {
-            if ($subject['subject_code'] == $subject_code) {
-                $exists = true;
-                break;
-            }
-        }
-
-        if ($exists) {
+        // Check if the subject code already exists using a helper function from function.php
+        if (checkIfSubjectExists($subject_code)) {
             $errorMessages[] = "Subject code '$subject_code' already exists!";
         } else {
-            // Add the new subject to session
-            $_SESSION['subjects'][] = [
-                'subject_code' => $subject_code,
-                'subject_name' => $subject_name
-            ];
-            $successMessage = "Subject added successfully!";
-            header('Location: add.php'); // Refresh the page after adding the subject
-            exit(); // Stop further execution after redirect
+            // Insert the new subject into the database using the helper function from function.php
+            if (addSubject($subject_code, $subject_name)) {
+                $successMessage = "Subject added successfully!";
+            } else {
+                $errorMessages[] = "Error adding subject. Please try again later.";
+            }
         }
     }
 }
-
 ?>
 
+<!-- HTML Form for Adding Subject -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -73,7 +65,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && $_POST['action'] == 'add_subject') {
 
     <!-- Success message -->
     <?php if ($successMessage): ?>
-        <div class="alert alert-success"><?= $successMessage ?></div>
+        <div class="alert alert-success"><?= htmlspecialchars($successMessage) ?></div>
     <?php endif; ?>
 
     <!-- Error messages -->
@@ -120,16 +112,18 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && $_POST['action'] == 'add_subject') {
                 </tr>
             </thead>
             <tbody>
-                <?php if (!empty($_SESSION['subjects'])): ?>
-                    <?php foreach ($_SESSION['subjects'] as $subject): ?>
+                <?php
+                // Fetch subjects from the database using the function from function.php
+                $subjects = getSubjects();
+
+                // Check if the subjects array is not empty
+                if (!empty($subjects)): ?>
+                    <?php foreach ($subjects as $subject): ?>
                         <tr>
                             <td><?= htmlspecialchars($subject['subject_code']) ?></td>
                             <td><?= htmlspecialchars($subject['subject_name']) ?></td>
                             <td>
-                                <!-- Edit button (blue) -->
                                 <a href="edit.php?subject_code=<?= htmlspecialchars($subject['subject_code']) ?>" class="btn btn-info btn-sm">Edit</a>
-
-                                <!-- Delete button (red) -->
                                 <a href="delete.php?subject_code=<?= htmlspecialchars($subject['subject_code']) ?>" class="btn btn-danger btn-sm">Delete</a>
                             </td>
                         </tr>
